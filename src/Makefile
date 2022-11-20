@@ -9,4 +9,4 @@ clean:
 	rm -rf main
 
 run:
-	./main 5
+	./main 1
