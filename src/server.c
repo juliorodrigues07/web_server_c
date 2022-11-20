@@ -1,6 +1,6 @@
 #include "server.h"
 
-int socket_creation (int n_connections){
+int socket_creation(int n_connections){
 
     bool check = true;
     struct sockaddr_in serv_addr;
@@ -16,7 +16,6 @@ int socket_creation (int n_connections){
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     serv_addr.sin_port = htons(PORT_NUMBER);
-    //memset(servidor.sin_zero, 0, sizeof servidor.sin_zero);
 
     if (bind(socket_fd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
         close(socket_fd);
@@ -27,16 +26,6 @@ int socket_creation (int n_connections){
         error("ERROR: Listening!\n");
 
     return socket_fd;
-}
-
-request *read_header(int client_socket){
-
-    request *r = (request *) malloc(sizeof(request));
-
-    r->bytes_read = 0;
-    r->bytes_read = read(client_socket, r->header, HEADER_SIZE);
-
-    return r;
 }
 
 response *load_file(char *path){
@@ -175,31 +164,82 @@ response *http_parser (request *r){
     return answer;
 }
 
+request *read_header(int client_socket){
+
+    request *r = (request *) malloc(sizeof(request));
+
+    r->bytes_read = 0;
+    r->bytes_read = read(client_socket, r->header, HEADER_SIZE);
+
+    return r;
+}
+
 void client_response(int client_socket_fd){
 
     request *r = read_header(client_socket_fd);
+    printf("%s\n", r->header);
     struct response *answer = http_parser(r);
 
-    write (client_socket_fd, answer->response_buffer, answer->message_length);
-    close (client_socket_fd);
+    write(client_socket_fd, answer->response_buffer, answer->message_length);
+    close(client_socket_fd);
 
-    free (answer->response_buffer);
-    free (answer);
-    free (r);
+    free(answer->response_buffer);
+    free(answer);
+    free(r);
 }
 
 void iterative_server(){
 
+    int client_socket_fd;
     struct sockaddr_in client;
-    int socket_fd, client_socket_fd;
     int size_socket_addr = sizeof(struct sockaddr_in);
-
-    socket_fd = socket_creation(1);
+    int socket_fd = socket_creation(1);
 
     while (true) {
         client_socket_fd = accept(socket_fd, (struct sockaddr *) &client, (socklen_t *) &size_socket_addr);
+
+        if (client_socket_fd < 0)
+            error("ERROR: Accept!");
+
         client_response(client_socket_fd);
     }
 
     close(socket_fd);
+}
+
+void fork_server() {
+
+    int client_socket_fd, statloc;
+    struct sockaddr_in client;
+    int size_socket_addr = sizeof(struct sockaddr_in);
+    int socket_fd = socket_creation(1);
+    pid_t child;
+
+    while (true) {
+        client_socket_fd = accept(socket_fd, (struct sockaddr *) &client, (socklen_t *) &size_socket_addr);
+
+        if (client_socket_fd < 0)
+            error("ERROR: Accept!\n");
+
+        if ((child = fork()) < 0)
+            error("ERROR: Fork!\n");
+
+        if (child == 0) {
+            client_response(client_socket_fd);
+            sleep(5);
+            kill(child, SIGKILL);
+        }
+        /*else {
+            if ((waitpid(child, &statloc, 0)) == -1)
+                error("ERROR: Waitpid!\n");
+        }*/
+
+        close(client_socket_fd);
+    }
+    close(socket_fd);
+}
+
+void thread_server() {
+
+
 }

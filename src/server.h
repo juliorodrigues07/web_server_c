@@ -3,7 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <pthread.h>
 #include <stdbool.h>
+#include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 
@@ -11,6 +13,8 @@
 #define MAX_CONNECTIONS 16
 #define HEADER_SIZE 1024
 #define PATH_SIZE 128
+
+pthread_mutex_t n_requests;
 
 typedef struct response {
     char *response_buffer;
@@ -30,3 +34,5 @@ response *load_file(char *path);
 response *http_parser(request *r);
 void client_response(int client_socket_fd);
 void iterative_server();
+void fork_server();
+void thread_server();
