@@ -82,12 +82,14 @@ response *load_file(char *path){
     return file;
 }
 
-response *http_parser (request *r){
+response *http_parser(request *r){
 
     bool check = true;
     int i, j, h_size;
     char method[4];
     char header[128] = {0};
+
+    // -9 -> Bytes warning -> '../files/'
     char path[PATH_SIZE - 9] = {0};
 
     response *file;
@@ -143,13 +145,13 @@ response *http_parser (request *r){
     }
 
     if (file->status == 404)
-        sprintf(header, "HTTP/1.1 404 Not Found\nContent-Lenght: %d\r\n\r\n", file->message_length);
+        sprintf(header, "HTTP/1.1 404 Not Found\nContent-Length: %d\r\n\r\n", file->message_length);
     else if (file->status == 413)
-        sprintf(header, "HTTP/1.1 413 Payload Too Large\nContent-Lenght: %d\r\n\r\n", file->message_length);
+        sprintf(header, "HTTP/1.1 413 Payload Too Large\nContent-Length: %d\r\n\r\n", file->message_length);
     else if (file->status == 200)
-        sprintf(header, "HTTP/1.1 200 OK\nContent-Lenght: %d\r\n\r\n", file->message_length);
+        sprintf(header, "HTTP/1.1 200 OK\nContent-Length: %d\r\n\r\n", file->message_length);
     else if (file->status == 400)
-        sprintf(header, "HTTP/1.1 400 Bad Request\nContent-Lenght: %d\r\n\r\n", file->message_length);
+        sprintf(header, "HTTP/1.1 400 Bad Request\nContent-Length: %d\r\n\r\n", file->message_length);
 
     h_size = (int) strlen(header);
     answer->response_buffer = malloc(h_size + file->message_length);
@@ -177,11 +179,14 @@ request *read_header(int client_socket){
 void client_response(int client_socket_fd){
 
     request *r = read_header(client_socket_fd);
-    printf("%s\n", r->header);
     struct response *answer = http_parser(r);
 
     write(client_socket_fd, answer->response_buffer, answer->message_length);
     close(client_socket_fd);
+
+    // Exibe cada requisição e resposta HTTP correspondente
+    /*printf("%s\n", r->header);
+    printf("%s\n", answer->response_buffer);*/
 
     free(answer->response_buffer);
     free(answer);
@@ -237,6 +242,8 @@ void fork_server() {
 
         close(client_socket_fd);
     }
+
+    // TODO: fork control (Memory leak -> zombie processes)
     close(socket_fd);
 }
 
@@ -276,7 +283,6 @@ void thread_server() {
     for (int i = 0; i < BUFFER_SIZE; i++)
         requests_queue[i] = -1;
 
-    n_requests = 0;
     pthread_mutex_init(&n_control, NULL);
 
     for (int i = 0; i < MAX_CONNECTIONS; i++) {
@@ -289,6 +295,9 @@ void thread_server() {
     while (true) {
 
         client_socket_fd = accept(socket_fd, (struct sockaddr *) &client, (socklen_t *) &size_socket_addr);
+
+        if (client_socket_fd < 0)
+            error("ERROR: Accept!\n");
 
         for (int i = 0; i < BUFFER_SIZE; i++) {
 
@@ -310,8 +319,51 @@ void thread_server() {
         }
     }
 
+    // TODO: Unreachable?
     close(socket_fd);
     pthread_mutex_destroy(&n_control);
     for (int i = 0; i < MAX_CONNECTIONS; i++)
         pthread_mutex_destroy(&queue_control[i]);
+}
+
+void concurrent_server() {
+
+    int client_socket_fd, max_socket, activity;
+    int size_socket_addr = sizeof(struct sockaddr_in);
+    int socket_fd = socket_creation(MAX_CONNECTIONS);
+    struct sockaddr_in client;
+
+    fd_set master, reader;
+    FD_ZERO(&master); FD_ZERO(&reader);
+
+    FD_SET(socket_fd, &master);
+    max_socket = socket_fd;
+
+    while (true) {
+        reader = master;
+        activity = select(max_socket + 1, &reader, NULL, NULL, NULL);
+
+        if (activity < 0)
+            error("ERROR: Select!\n");
+
+        for (int i = 0; i <= max_socket; i++) {
+
+            if (FD_ISSET(i, &reader)) {
+                if (i == socket_fd) {
+
+                    client_socket_fd = accept(socket_fd, (struct sockaddr *) &client, (socklen_t *) &size_socket_addr);
+
+                    if (client_socket_fd < 0)
+                        error("ERROR: Accept!\n");
+
+                    FD_SET(client_socket_fd, &master);
+                    if (client_socket_fd > max_socket)
+                        max_socket = client_socket_fd;
+                } else {
+                    client_response(i);
+                    FD_CLR(i, &master);
+                }
+            }
+        }
+    }
 }
