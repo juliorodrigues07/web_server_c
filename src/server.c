@@ -119,7 +119,7 @@ response *http_parser (request *r){
             closedir(d);
             file = load_file("../files/404.html");
         } else {
-            if (strncmp("../files/", path, 9)) {
+            if ((int) strncmp("../files/", path, 9)) {
                 char tmp[PATH_SIZE] = {0};
                 sprintf(tmp, "../files/%s", path);
                 file = load_file(tmp);
@@ -151,7 +151,7 @@ response *http_parser (request *r){
     else if (file->status == 400)
         sprintf(header, "HTTP/1.1 400 Bad Request\nContent-Lenght: %d\r\n\r\n", file->message_length);
 
-    h_size = strlen(header);
+    h_size = (int) strlen(header);
     answer->response_buffer = malloc(h_size + file->message_length);
 
     memcpy (answer->response_buffer, header, h_size);
@@ -169,7 +169,7 @@ request *read_header(int client_socket){
     request *r = (request *) malloc(sizeof(request));
 
     r->bytes_read = 0;
-    r->bytes_read = read(client_socket, r->header, HEADER_SIZE);
+    r->bytes_read = (int) read(client_socket, r->header, HEADER_SIZE);
 
     return r;
 }
@@ -209,7 +209,8 @@ void iterative_server(){
 
 void fork_server() {
 
-    int client_socket_fd, statloc;
+    //int statloc;
+    int client_socket_fd;
     struct sockaddr_in client;
     int size_socket_addr = sizeof(struct sockaddr_in);
     int socket_fd = socket_creation(1);
@@ -239,7 +240,78 @@ void fork_server() {
     close(socket_fd);
 }
 
+void consumer() {
+
+    while (true) {
+
+        for (int i = 0; i < MAX_CONNECTIONS; i++) {
+
+            if (!pthread_mutex_trylock(&queue_control[i])) {
+
+                if (requests_queue[i] != -1) {
+                    client_response((int) requests_queue[i]);
+                    requests_queue[i] = -1;
+                }
+                pthread_mutex_unlock(&queue_control[i]);
+            } else if (!pthread_mutex_trylock(&queue_control[BUFFER_SIZE - 1 - i])) {
+
+                if (requests_queue[BUFFER_SIZE - 1 - i] != -1){
+                    client_response((int) requests_queue[BUFFER_SIZE - 1 - i]);
+                    requests_queue[BUFFER_SIZE - 1 - i] = -1;
+                }
+                pthread_mutex_unlock(&queue_control[BUFFER_SIZE - 1 - i]);
+            }
+        }
+        sleep(1);
+    }
+}
+
 void thread_server() {
 
+    int client_socket_fd;
+    struct sockaddr_in client;
+    int size_socket_addr = sizeof(struct sockaddr_in);
+    int socket_fd = socket_creation(MAX_CONNECTIONS);
 
+    for (int i = 0; i < BUFFER_SIZE; i++)
+        requests_queue[i] = -1;
+
+    n_requests = 0;
+    pthread_mutex_init(&n_control, NULL);
+
+    for (int i = 0; i < MAX_CONNECTIONS; i++) {
+
+        pthread_mutex_init(&queue_control[i], NULL);
+        if ((int) pthread_create(&threads[i], NULL, (void *) &consumer, NULL) < 0)
+            error("ERROR: Thread!\n");
+    }
+
+    while (true) {
+
+        client_socket_fd = accept(socket_fd, (struct sockaddr *) &client, (socklen_t *) &size_socket_addr);
+
+        for (int i = 0; i < BUFFER_SIZE; i++) {
+
+            if (requests_queue[i] == -1) {
+
+                if (!pthread_mutex_trylock(&queue_control[i])) {
+                    requests_queue[i] = client_socket_fd;
+                    pthread_mutex_unlock(&queue_control[i]);
+                    break;
+                }
+            } else if (requests_queue[BUFFER_SIZE - 1 - i] == -1) {
+
+                if (!pthread_mutex_trylock(&queue_control[BUFFER_SIZE - 1 - i])) {
+                    requests_queue[BUFFER_SIZE - 1 - i] = client_socket_fd;
+                    pthread_mutex_unlock(&queue_control[BUFFER_SIZE - 1 - i]);
+                    break;
+                }
+            }
+        }
+    }
+
+    close(socket_fd);
+    pthread_mutex_destroy(&n_control);
+    for (int i = 0; i < MAX_CONNECTIONS; i++)
+        pthread_mutex_destroy(&queue_control[i]);
 }

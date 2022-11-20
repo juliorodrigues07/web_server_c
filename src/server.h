@@ -13,8 +13,13 @@
 #define MAX_CONNECTIONS 16
 #define HEADER_SIZE 1024
 #define PATH_SIZE 128
+#define BUFFER_SIZE 128
 
-pthread_mutex_t n_requests;
+u_int32_t n_requests;
+pthread_mutex_t n_control;
+u_int32_t requests_queue[BUFFER_SIZE];
+pthread_mutex_t queue_control[BUFFER_SIZE];
+pthread_t threads[MAX_CONNECTIONS];
 
 typedef struct response {
     char *response_buffer;
@@ -36,3 +41,4 @@ void client_response(int client_socket_fd);
 void iterative_server();
 void fork_server();
 void thread_server();
+void consumer();
