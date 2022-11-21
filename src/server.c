@@ -133,7 +133,7 @@ response *http_parser(request *r){
         // Caso em que o arquivo requisitado é index.html ou outro qualquer
         if (path[0] == '/' && path[1] == 0 || path[0] == 0 || d != NULL) {
             closedir(d);
-            file = load_file("../files/404.html");
+            file = load_file("../files/index.html");
         } else {
             // Caso em que o caminho não possui o prefixo '../files/'
             if ((int) strncmp("../files/", path, 9)) {
@@ -172,12 +172,12 @@ response *http_parser(request *r){
     h_size = (int) strlen(header);
     answer->response_buffer = malloc(h_size + file->message_length);
 
-    memcpy (answer->response_buffer, header, h_size);
-    memcpy (h_size + answer->response_buffer, file->response_buffer, file->message_length);
+    memcpy(answer->response_buffer, header, h_size);
+    memcpy(h_size + answer->response_buffer, file->response_buffer, file->message_length);
     answer->message_length = h_size + file->message_length;
 
-    free (file->response_buffer);
-    free (file);
+    free(file->response_buffer);
+    free(file);
 
     return answer;
 }
