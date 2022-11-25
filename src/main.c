@@ -8,8 +8,8 @@ int main(int argc, char **argv) {
     int option = atoi(argv[1]);
     int port_number = atoi(argv[2]);
 
-    if (port_number < 1024)
-        error("Port number must be an integer greater than 1023!\n");
+    if (port_number < 1024 || port_number > 65536)
+        error("Port number must be an integer greater than 1023 and less than 65536!\n");
 
     switch (option) {
         case 1:
