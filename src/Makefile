@@ -9,13 +9,13 @@ clean:
 	rm -rf main
 
 iterative:
-	./main 1
+	./main 1 2000
 
 fork:
-	./main 2
+	./main 2 2077
 
 thread:
-	./main 3
+	./main 3 3033
 
 concurrent:
-	./main 4
+	./main 4 4044
