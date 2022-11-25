@@ -9,8 +9,7 @@
 #include <dirent.h>
 #include <stdio.h>
 
-// CONSTANTES (nº da porta, máximo de conexões, tamanho máximo da linha de requisição HTTP (GET), URL e buffer)
-#define PORT_NUMBER 2000
+// CONSTANTES (máximo de conexões, tamanho máximo da linha de requisição HTTP (GET), URL e buffer)
 #define MAX_CONNECTIONS 16
 #define HEADER_SIZE 1024
 #define PATH_SIZE 128
@@ -42,7 +41,7 @@ typedef struct request {
 
 // ACUSAÇÃO DE ERROS E CRIAÇÃO DAS CONEXÕES (SOCKETS)
 void error(const char *msg);
-int socket_creation(int n_connections);
+int socket_creation(int port_number, int n_connections);
 
 // MANIPULAÇÃO DAS MENSAGENS HTTP
 request *read_header(int client_socket);
@@ -51,11 +50,11 @@ response *http_parser(request *r);
 void client_response(int client_socket_fd);
 
 // SERVIDORES
-void iterative_server();
-void fork_server();
+void iterative_server(int port_number);
+void fork_server(int port_number);
 void consumer();
-void thread_server();
-void concurrent_server();
+void thread_server(int port_number);
+void concurrent_server(int port_number);
 
 // TESTE AUXILIAR
 void test_parser();

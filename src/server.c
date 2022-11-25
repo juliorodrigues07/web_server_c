@@ -5,7 +5,7 @@ void error(const char *msg) {
     exit(1);
 }
 
-int socket_creation(int n_connections){
+int socket_creation(int port_number, int n_connections){
 
     bool check = true;
     struct sockaddr_in serv_addr;
@@ -20,7 +20,7 @@ int socket_creation(int n_connections){
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(PORT_NUMBER);
+    serv_addr.sin_port = htons(port_number);
 
     if (bind(socket_fd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
         close(socket_fd);
@@ -210,7 +210,7 @@ void client_response(int client_socket_fd){
     free(r);
 }
 
-void iterative_server(){
+void iterative_server(int port_number){
 
     // Variáveis para comunicação em rede (sockets)
     int client_socket_fd;
@@ -218,7 +218,7 @@ void iterative_server(){
     int size_socket_addr = sizeof(struct sockaddr_in);
 
     // Somente uma requisição por vez
-    int socket_fd = socket_creation(1);
+    int socket_fd = socket_creation(port_number, 1);
 
     // LOOP INFINITO: Servidor recebendo requisições indefinidamente
     while (true) {
@@ -233,13 +233,13 @@ void iterative_server(){
     close(socket_fd);
 }
 
-void fork_server() {
+void fork_server(int port_number) {
 
     //int statloc;
     int client_socket_fd;
     struct sockaddr_in client;
     int size_socket_addr = sizeof(struct sockaddr_in);
-    int socket_fd = socket_creation(1);
+    int socket_fd = socket_creation(port_number, 1);
     pid_t child;
 
     // LOOP INFINITO: Servidor recebendo requisições indefinidamente
@@ -300,14 +300,14 @@ void consumer() {
     }
 }
 
-void thread_server() {
+void thread_server(int port_number) {
 
     int client_socket_fd;
     struct sockaddr_in client;
     int size_socket_addr = sizeof(struct sockaddr_in);
 
-    // Várias conexões pararelas
-    int socket_fd = socket_creation(MAX_CONNECTIONS);
+    // Várias conexões paralelas
+    int socket_fd = socket_creation(port_number, MAX_CONNECTIONS);
 
     // Fila de requisições
     for (int i = 0; i < BUFFER_SIZE; i++)
@@ -358,11 +358,11 @@ void thread_server() {
         pthread_mutex_destroy(&queue_control[i]);
 }
 
-void concurrent_server() {
+void concurrent_server(int port_number) {
 
     int client_socket_fd, max_socket, activity;
     int size_socket_addr = sizeof(struct sockaddr_in);
-    int socket_fd = socket_creation(MAX_CONNECTIONS);
+    int socket_fd = socket_creation(port_number, MAX_CONNECTIONS);
     struct sockaddr_in client;
 
     fd_set master, reader;

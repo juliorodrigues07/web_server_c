@@ -2,23 +2,27 @@
 
 int main(int argc, char **argv) {
 
-    if (argc < 2 || argc >= 3)
-        error("USAGE: ./main <option>\n");
+    if (argc < 3 || argc >= 4)
+        error("USAGE: ./main <option> <port number>\n");
 
     int option = atoi(argv[1]);
+    int port_number = atoi(argv[2]);
+
+    if (port_number < 1024)
+        error("Port number must be an integer greater than 1023!\n");
 
     switch (option) {
         case 1:
-            iterative_server();
+            iterative_server(port_number);
             break;
         case 2:
-            fork_server();
+            fork_server(port_number);
             break;
         case 3:
-            thread_server();
+            thread_server(port_number);
             break;
         case 4:
-            concurrent_server();
+            concurrent_server(port_number);
             break;
         default:
             printf("ERROR: Invalid Option!\n");
