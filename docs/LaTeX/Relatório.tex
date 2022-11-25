@@ -180,7 +180,7 @@ A segunda falha está no servidor que utiliza \emph{threads}. O tempo de ociosid
 
 \section{Compilação e Execução}
 
-Antes de discutir quaisquer detalhes de compilação e execução, é importante citar que a execução dos vários tipos de servidor pode requerer uma mudança no número da porta para possibilitar a abertura da conexão no \emph{socket TCP}. Esta alteração deve ser feita diretamente no código (\emph{server.h}) onde está definida a constante do número de porta (\emph{PORT\_NUMBER}).\\
+Antes de discutir quaisquer detalhes de compilação e execução, é importante citar que a execução dos vários tipos de servidor pode requerer uma mudança no número da porta para possibilitar a abertura da conexão no \emph{socket TCP}. Esta alteração deve ser feita diretamente no \emph{Makefile}, alterando o argumento nos comandos de execução que corresponde ao número da porta.\\
 
 \noindent Para compilar o programa, basta executar o seguinte comando via terminal:
 
